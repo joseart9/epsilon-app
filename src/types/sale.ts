@@ -2,6 +2,6 @@ import Product from "@/types/product";
 
 export default interface Sale {
   storeId: number;
-  products: Product;
+  products: Product[];
   date: Date;
 }
