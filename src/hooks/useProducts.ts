@@ -34,7 +34,7 @@ const useProducts = (storeId: number) => {
     fetchAndSetProducts();
   }, [storeId]);
 
-  return { products, loading, error, revalidate: fetchAndSetProducts };
+  return [products, loading, error, fetchAndSetProducts] as const;
 };
 
 export default useProducts;

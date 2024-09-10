@@ -52,7 +52,7 @@ export default function UserInventario() {
     const [storeId, setStoreId] = useState<number | null>(null);
     const [rows, setRows] = useState<Row[]>([]);
 
-    const { products, loading, error } = useProducts(storeId ?? 0);
+    const [products, loading, error] = useProducts(storeId ?? 0);
 
     const actualDate = new Date().toLocaleDateString('es-ES', options);
 
@@ -104,7 +104,7 @@ export default function UserInventario() {
         // Add current date to sales
 
         const salesWithDate = { ...sales, date: new Date() };
-        const res = await saveSale(salesWithDate);
+        const res = await saveSale(salesWithDate, user?.storeId!);
 
         if (res) {
             alert('Inventario guardado exitosamente');
@@ -131,7 +131,7 @@ export default function UserInventario() {
                     </div>
                     <Button variant="solid" size="sm" radius='full' onClick={handleAddRow} color="primary">Agregar Producto</Button>
                 </div>
-                <Table aria-label="Tabla de inventario" className='overflow-auto shadow-xl'>
+                <Table aria-label="Tabla de inventario" className='overflow-auto p-0.5'>
                     <TableHeader columns={columns}>
                         {(column) => <TableColumn key={column.key}>{column.label}</TableColumn>}
                     </TableHeader>
