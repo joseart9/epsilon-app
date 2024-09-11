@@ -3,7 +3,7 @@
 import { useUser } from '@/providers/user';
 import { useEffect, useState } from "react";
 import useProducts from "@/hooks/useProducts";
-import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Button, Input } from "@nextui-org/react";
+import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Button, Input, CircularProgress } from "@nextui-org/react";
 import Product from "@/types/product";
 import Drawer from 'react-modern-drawer';
 import 'react-modern-drawer/dist/index.css';
@@ -32,7 +32,10 @@ export default function Inventario() {
     const [products, loading, error, fetchAndSetProducts] = useProducts(storeId ?? 0);
 
     // Mostrar un mensaje mientras se cargan los productos
-    if (loading) return <div>Loading...</div>;
+    if (loading) return (
+        <div className='flex w-full h-full justify-center items-center'>
+            <CircularProgress />
+        </div>);
     if (error) return <div>Error al cargar los productos</div>;
 
     // Filtrar productos según el valor de búsqueda
@@ -132,14 +135,14 @@ export default function Inventario() {
                                     innerWrapper: "bg-transparent",
                                     inputWrapper: [
                                         "shadow-xl",
-                                        "bg-default-200/50",
+                                        "bg-default-100/50",
                                         "dark:bg-default/60",
                                         "backdrop-blur-xl",
                                         "backdrop-saturate-200",
-                                        "hover:bg-default-200/70",
+                                        "hover:bg-default-100/70",
                                         "dark:hover:bg-default/70",
-                                        "group-data-[focus=true]:bg-default-200/50",
-                                        "dark:group-data-[focus=true]:bg-default/60",
+                                        "group-data-[focus=true]:bg-default-100/50",
+                                        "dark:group-data-[focus=true]:bg-default-200/60",
                                         "!cursor-text",
                                     ],
                                 }}
