@@ -36,3 +36,25 @@ export async function saveCorteData(corte: Corte): Promise<void> {
     console.error("Error al guardar el corte: ", error);
   }
 }
+
+// Function to get all Cortes from db given a storeId
+export async function getCortesByStoreId(storeId: number): Promise<Corte[]> {
+  try {
+    // Referencia a la colección 'corte'
+    const corteCollectionRef = collection(db, "corte");
+
+    // Consultar los cortes de la tienda
+    const q = query(corteCollectionRef, where("storeId", "==", storeId));
+    const querySnapshot = await getDocs(q);
+
+    const cortes: Corte[] = [];
+    querySnapshot.forEach((doc) => {
+      cortes.push(doc.data() as Corte);
+    });
+
+    return cortes;
+  } catch (error) {
+    console.error("Error al obtener los cortes: ", error);
+    return [];
+  }
+}
