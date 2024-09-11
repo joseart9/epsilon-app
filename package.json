@@ -10,7 +10,9 @@
   },
   "dependencies": {
     "@nextui-org/react": "^2.4.6",
+    "axios": "^1.7.7",
     "firebase": "^10.13.1",
+    "formidable": "^3.5.1",
     "framer-motion": "^11.3.31",
     "next": "14.2.7",
     "react": "^18",
@@ -18,6 +20,7 @@
     "react-modern-drawer": "^1.4.0"
   },
   "devDependencies": {
+    "@types/formidable": "^3.4.5",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",

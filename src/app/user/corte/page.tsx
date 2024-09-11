@@ -4,6 +4,11 @@ import { useUser } from '@/providers/user';
 import { Button } from "@nextui-org/button";
 import { Input } from "@nextui-org/react";
 import { useState, useRef } from "react";
+import axios from 'axios'; // Import axios
+import { saveCorteData } from "@/server/actions/corte"; // Import saveCorteData function
+
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { storage } from "@/firebase";
 
 const options: Intl.DateTimeFormatOptions = {
     weekday: 'long',
@@ -12,65 +17,137 @@ const options: Intl.DateTimeFormatOptions = {
     day: 'numeric'
 };
 
-export default function UserInventario() {
-    const { user } = useUser();
+export default function UserCorte() {
+    const { user } = useUser();  // Assume user object contains storeId
 
     const actualDate = new Date().toLocaleDateString('es-ES', options);
-
-    // Estado separado para cada campo
     const [tarjeta, setTarjeta] = useState("");
     const [efectivo, setEfectivo] = useState("");
     const [gastos, setGastos] = useState("");
-    const [file, setFile] = useState<File | null>(null); // Estado para la foto
 
-    const fileInputRef = useRef<HTMLInputElement | null>(null);
+    const [tarjetaFile, setTarjetaFile] = useState<File | null>(null);
+    const [efectivoFile, setEfectivoFile] = useState<File | null>(null);
+    const [gastosFile, setGastosFile] = useState<File | null>(null);
 
-    // Función para manejar los cambios de entrada
+
+    const [uploading, setUploading] = useState(false);
+    const [uploadedUrl, setUploadedUrl] = useState<string | null>(null);
+
+    const tarjetaInputRef = useRef<HTMLInputElement | null>(null);
+    const efectivoInputRef = useRef<HTMLInputElement | null>(null);
+    const gastosInputRef = useRef<HTMLInputElement | null>(null);
+
+    // Handle input changes
     const handleInputChange = (setter: any) => (e: any) => {
-        const inputValue = e.target.value.replace(/,/g, ''); // Eliminar comas existentes
+        const inputValue = e.target.value.replace(/,/g, '');
         if (!isNaN(inputValue)) {
-            const formattedValue = inputValue === "" ? "" : parseFloat(inputValue).toLocaleString("en-US"); // Formatear con comas
+            const formattedValue = inputValue === "" ? "" : parseFloat(inputValue).toLocaleString("en-US");
             setter(formattedValue);
         }
     };
 
-    // Función para convertir el valor formateado a número (sin comas) o retornar 0 si está vacío
+    // Convert formatted value to number
     const parseValueToNumber = (value: string): number => {
         return value === "" ? 0 : parseFloat(value.replace(/,/g, ""));
     };
 
-    // Función para manejar el archivo (foto) seleccionado
-    const handleFileChange = (e: any) => {
+    // Handle file change
+    const handleFileChange = (e: any, type: string) => {
         const selectedFile = e.target.files[0];
-        setFile(selectedFile);
+        if (type === "tarjeta") {
+            setTarjetaFile(selectedFile);
+        } else if (type === "efectivo") {
+            setEfectivoFile(selectedFile);
+        } else if (type === "gastos") {
+            setGastosFile(selectedFile);
+        }
     };
 
-    // Verificar si al menos un monto es mayor a 0
-    const isMontoGreaterThanZero = () => {
-        return parseValueToNumber(tarjeta) > 0 || parseValueToNumber(efectivo) > 0 || parseValueToNumber(gastos) > 0;
+    // Function to handle file upload to Firebase
+    const handleUpload = async (type: string, file: File, reference: string) => {
+        console.log(file);
+        if (!file) return;
+
+        const storeId = user?.storeId;
+        const currentDate = new Date().toISOString().split('T')[0];
+        const fileName = `${storeId}_${type}_${currentDate}.jpeg`;
+
+        console.log("Uploading file:", fileName);
+
+        setUploading(true);
+        const storageRef = ref(storage, `${reference}/${fileName}`);
+
+        try {
+            await uploadBytes(storageRef, file);
+            const url = await getDownloadURL(storageRef);
+            setUploadedUrl(url);
+            console.log("File uploaded successfully:", url);
+            return url;
+        } catch (error) {
+            console.error('Error uploading the file', error);
+        } finally {
+            setUploading(false);
+        }
     };
 
-    // Función para enviar los valores a la consola como números
-    const handleSend = () => {
+    // Function to handle form submission
+    const handleSend = async () => {
         const tarjetaNumber = parseValueToNumber(tarjeta);
         const efectivoNumber = parseValueToNumber(efectivo);
         const gastosNumber = parseValueToNumber(gastos);
 
-        // Si al menos un monto es mayor a 0, la foto es requerida
-        if (isMontoGreaterThanZero() && !file) {
-            alert("Es necesario subir una foto si el monto es mayor a 0.");
-            return;
+        let tarjetaUrl = "";
+        let efectivoUrl = "";
+        let gastosUrl = "";
+
+        if (tarjetaNumber > 0 && tarjetaFile) {
+            tarjetaUrl = await handleUpload("tarjeta", tarjetaFile, "tarjeta") || "";
+        }
+        if (efectivoNumber > 0 && efectivoFile) {
+            efectivoUrl = await handleUpload("efectivo", efectivoFile, "efectivo") || "";
+        }
+        if (gastosNumber > 0 && gastosFile) {
+            gastosUrl = await handleUpload("gastos", gastosFile, "gastos") || "";
+        }
+
+        const corte = {
+            storeId: user?.storeId || 0,  // Assuming storeId comes from the user object
+            efectivo: {
+                total: efectivoNumber,
+                imageUrl: efectivoUrl,
+            },
+            tarjeta: {
+                total: tarjetaNumber,
+                imageUrl: tarjetaUrl,
+            },
+            gastos: {
+                total: gastosNumber,
+                imageUrl: gastosUrl,
+            },
+            date: new Date(), // Current date
+            userId: user?.identifier || 0,  // Assuming userId comes from the user object
+        };
+
+        try {
+            await saveCorteData(corte);
+            console.log("Corte saved successfully");
+        } catch (error) {
+            console.error("Error saving corte:", error);
         }
 
         console.log("Tarjeta:", tarjetaNumber);
         console.log("Efectivo:", efectivoNumber);
         console.log("Gastos:", gastosNumber);
-        console.log("Foto:", file ? file.name : "No se subió ninguna foto");
+
     };
 
-    const handleClick = () => {
-        if (fileInputRef.current) {
-            fileInputRef.current.click(); // Simular el clic en el input de archivo
+    const handleClick = (type: string) => {
+        if (type === "tarjeta" && tarjetaInputRef.current) {
+            tarjetaInputRef.current.click();
+        } else if (type === "efectivo" && efectivoInputRef.current) {
+            efectivoInputRef.current.click();
+        } else if (type === "gastos" && gastosInputRef.current) {
+            gastosInputRef.current.click();
         }
     };
 
@@ -103,7 +180,7 @@ export default function UserInventario() {
                         {/* Botón personalizado para cargar una imagen */}
                         <Button
                             color="primary"
-                            onClick={handleClick} // Al hacer clic, abre el selector de archivos
+                            onClick={() => handleClick("tarjeta")} // Al hacer clic, abre el selector de archivos
                             isIconOnly
                             className="p-2 rounded-full"
                         >
@@ -114,10 +191,10 @@ export default function UserInventario() {
 
                         {/* Input de archivo oculto */}
                         <input
-                            ref={fileInputRef}
+                            ref={tarjetaInputRef}
                             type="file"
                             accept="image/*"
-                            onChange={handleFileChange}
+                            onChange={(event) => handleFileChange(event, "tarjeta")}
                             style={{ display: 'none' }} // Ocultar el input de archivo
                         />
                     </div>
@@ -141,7 +218,7 @@ export default function UserInventario() {
                         {/* Botón personalizado para cargar una imagen */}
                         <Button
                             color="primary"
-                            onClick={handleClick} // Al hacer clic, abre el selector de archivos
+                            onClick={() => handleClick("efectivo")} // Al hacer clic, abre el selector de archivos
                             isIconOnly
                             className="p-2 rounded-full"
                         >
@@ -152,10 +229,10 @@ export default function UserInventario() {
 
                         {/* Input de archivo oculto */}
                         <input
-                            ref={fileInputRef}
+                            ref={efectivoInputRef}
                             type="file"
                             accept="image/*"
-                            onChange={handleFileChange}
+                            onChange={(event) => handleFileChange(event, "efectivo")}
                             style={{ display: 'none' }} // Ocultar el input de archivo
                         />
                     </div>
@@ -180,7 +257,7 @@ export default function UserInventario() {
                         {/* Botón personalizado para cargar una imagen */}
                         <Button
                             color="primary"
-                            onClick={handleClick} // Al hacer clic, abre el selector de archivos
+                            onClick={() => handleClick("gastos")} // Al hacer clic, abre el selector de archivos
                             isIconOnly
                             className="p-2 rounded-full"
                         >
@@ -191,16 +268,16 @@ export default function UserInventario() {
 
                         {/* Input de archivo oculto */}
                         <input
-                            ref={fileInputRef}
+                            ref={gastosInputRef}
                             type="file"
                             accept="image/*"
-                            onChange={handleFileChange}
+                            onChange={(event) => handleFileChange(event, "gastos")}
                             style={{ display: 'none' }} // Ocultar el input de archivo
                         />
                     </div>
 
                     {/* Botón para enviar los valores */}
-                    <Button color="primary" onClick={handleSend}>
+                    <Button color="primary" onClick={handleSend} isLoading={uploading}>
                         Enviar
                     </Button>
                 </div>
