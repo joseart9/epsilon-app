@@ -163,7 +163,7 @@ export default function Inventario() {
                     onRowAction={(row) => handleRowClick(row)}
                 >
                     <TableHeader>
-                        <TableColumn>SKU</TableColumn>
+                        <TableColumn>TIPO</TableColumn>
                         <TableColumn>PRODUCTO</TableColumn>
                         <TableColumn>STOCK</TableColumn>
                     </TableHeader>

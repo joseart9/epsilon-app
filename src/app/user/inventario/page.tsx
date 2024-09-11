@@ -31,7 +31,7 @@ const options: Intl.DateTimeFormatOptions = {
 const columns = [
     {
         key: "sku",
-        label: "SKU",
+        label: "TIPO",
     },
     {
         key: "producto",

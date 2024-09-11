@@ -4,7 +4,6 @@ import { useUser } from '@/providers/user';
 import { Button } from "@nextui-org/button";
 import { Input } from "@nextui-org/react";
 import { useState, useRef } from "react";
-import axios from 'axios'; // Import axios
 import { saveCorteData } from "@/server/actions/corte"; // Import saveCorteData function
 
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
@@ -18,7 +17,7 @@ const options: Intl.DateTimeFormatOptions = {
 };
 
 export default function UserCorte() {
-    const { user } = useUser();  // Assume user object contains storeId
+    const { user } = useUser();
 
     const actualDate = new Date().toLocaleDateString('es-ES', options);
     const [tarjeta, setTarjeta] = useState("");
@@ -31,11 +30,12 @@ export default function UserCorte() {
 
 
     const [uploading, setUploading] = useState(false);
-    const [uploadedUrl, setUploadedUrl] = useState<string | null>(null);
 
     const tarjetaInputRef = useRef<HTMLInputElement | null>(null);
     const efectivoInputRef = useRef<HTMLInputElement | null>(null);
     const gastosInputRef = useRef<HTMLInputElement | null>(null);
+
+    const [canSend, setCanSend] = useState(false);
 
     // Handle input changes
     const handleInputChange = (setter: any) => (e: any) => {
@@ -80,7 +80,6 @@ export default function UserCorte() {
         try {
             await uploadBytes(storageRef, file);
             const url = await getDownloadURL(storageRef);
-            setUploadedUrl(url);
             console.log("File uploaded successfully:", url);
             return url;
         } catch (error) {
@@ -102,16 +101,19 @@ export default function UserCorte() {
 
         if (tarjetaNumber > 0 && tarjetaFile) {
             tarjetaUrl = await handleUpload("tarjeta", tarjetaFile, "tarjeta") || "";
+            setCanSend(true);
         }
         if (efectivoNumber > 0 && efectivoFile) {
             efectivoUrl = await handleUpload("efectivo", efectivoFile, "efectivo") || "";
+            setCanSend(true);
         }
         if (gastosNumber > 0 && gastosFile) {
             gastosUrl = await handleUpload("gastos", gastosFile, "gastos") || "";
+            setCanSend(true);
         }
 
         const corte = {
-            storeId: user?.storeId || 0,  // Assuming storeId comes from the user object
+            storeId: user?.storeId || 0,  // storeId comes from the user object
             efectivo: {
                 total: efectivoNumber,
                 imageUrl: efectivoUrl,
@@ -125,20 +127,19 @@ export default function UserCorte() {
                 imageUrl: gastosUrl,
             },
             date: new Date(), // Current date
-            userId: user?.identifier || 0,  // Assuming userId comes from the user object
+            userId: user?.identifier || 0,  // userId comes from the user object
         };
 
-        try {
-            await saveCorteData(corte);
-            console.log("Corte saved successfully");
-        } catch (error) {
-            console.error("Error saving corte:", error);
+        if (canSend) {
+            try {
+                await saveCorteData(corte);
+                console.log("Corte saved successfully");
+            } catch (error) {
+                console.error("Error saving corte:", error);
+            }
+        } else {
+            alert("Informacion incompleta");
         }
-
-        console.log("Tarjeta:", tarjetaNumber);
-        console.log("Efectivo:", efectivoNumber);
-        console.log("Gastos:", gastosNumber);
-
     };
 
     const handleClick = (type: string) => {
@@ -156,7 +157,7 @@ export default function UserCorte() {
             <div className='w-full h-full flex flex-col space-y-3 overflow-auto'>
                 <div className="flex flex-row w-full shadow-lg rounded-lg p-2 justify-between items-center bg-gray-800 text-white">
                     <div className='flex flex-row items-center space-x-2'>
-                        <h1 className='text-xl ml-4 font-semibold'>Corte</h1>
+                        <h1 className='text-xl ml-4 font-semibold'>Corte de Caja</h1>
                         <h1 className='text-xl mr-4 font-semibold'>{actualDate}</h1>
                     </div>
                 </div>
