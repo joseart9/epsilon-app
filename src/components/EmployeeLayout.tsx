@@ -16,7 +16,7 @@ const routes = [
         href: "/user/inventario"
     },
     {
-        name: "Corte",
+        name: "Corte de Caja",
         href: "/user/corte"
     }
 ]
